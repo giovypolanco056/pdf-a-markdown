@@ -1,0 +1,20 @@
+# ---- Núcleo (obligatorio) ----
+PyMuPDF>=1.24        # extracción de texto, render de páginas y detección de tablas
+Pillow>=10.0         # manejo de imágenes para el OCR
+pytesseract>=0.3.10  # interfaz Python para el motor Tesseract OCR
+PyYAML>=6.0          # lectura de config.yaml (si falta, se usan los valores por defecto)
+tqdm>=4.66           # barra de progreso en el procesamiento por lotes
+
+# ---- OCR: requisito del SISTEMA (NO se instala con pip) ----
+# Hay que instalar el motor Tesseract y el idioma español (spa) aparte:
+#   Windows:  winget install UB-Mannheim.TesseractOCR
+#             (o el instalador de https://github.com/UB-Mannheim/tesseract/wiki)
+#   Linux:    sudo apt install tesseract-ocr tesseract-ocr-spa
+#   macOS:    brew install tesseract tesseract-lang
+
+# ---- Alternativas / mejoras opcionales (comentadas) ----
+# pdfplumber>=0.11      # extracción de tablas difíciles (alternativa a PyMuPDF)
+# ocrmypdf>=16          # añade una capa de texto a PDFs escaneados
+# pyspellchecker>=0.8   # corrección ortográfica del OCR en español
+# docling               # conversor PDF->MD de alta calidad (ver sección del README)
+# marker-pdf            # conversor PDF->MD de alta calidad (ver sección del README)

@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Editores
+.idea/
+.vscode/
+
+# Configuración local de Claude Code (personal)
+.claude/settings.local.json
+
+# Datos de idioma de Tesseract (grandes; se descargan aparte)
+tessdata/*.traineddata
+
+# Documentos del usuario: NO versionar (son datos personales/privados).
+# Se conserva SOLO la estructura de carpetas mediante los .gitkeep.
+documentos/originales/*
+documentos/markdown/*
+documentos/errores/*
+!documentos/originales/.gitkeep
+!documentos/markdown/.gitkeep
+!documentos/errores/.gitkeep

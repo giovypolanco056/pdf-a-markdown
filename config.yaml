@@ -1,0 +1,31 @@
+# Configuración del conversor PDF -> Markdown (Fase 1)
+# Todos los valores son opcionales. Si borras este archivo se usan los de por defecto.
+
+# --- Carpetas ---
+input_dir: "documentos/originales"
+output_dir: "documentos/markdown"
+errors_dir: "documentos/errores"
+
+# --- Idioma ---
+language: "es"        # etiqueta que se escribe en los metadatos del .md
+ocr_lang: "spa"       # código de idioma de Tesseract (spa = español; "spa+eng" para mixto)
+
+# --- Detección: digital vs. escaneado ---
+min_chars_text: 100   # nº de caracteres alfanuméricos por página para considerarla "con texto"
+
+# --- OCR ---
+ocr_dpi: 300          # más DPI = mejor OCR pero más lento (200-400 recomendado)
+tesseract_cmd: "C:\\Program Files\\Tesseract-OCR\\tesseract.exe"  # ruta al ejecutable
+                      # (pon null si Tesseract ya está en el PATH del sistema)
+tessdata_dir: "tessdata"  # carpeta con los .traineddata (aquí está spa.traineddata).
+                          # Pon null para usar la carpeta por defecto de Tesseract.
+min_ocr_conf: 60      # se marcan como dudosas las palabras por debajo de este % de confianza
+
+# --- Estructura y Markdown ---
+detect_tables: true
+remove_headers_footers: true
+include_page_markers: true   # inserta comentarios <!-- página N --> (útil para citar en RAG)
+
+# --- Procesamiento por lotes ---
+recursive: false      # buscar PDFs también en subcarpetas
+overwrite: false      # sobrescribir los .md que ya existan
