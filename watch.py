@@ -47,7 +47,8 @@ def _unique(path: Path) -> Path:
 
 
 def process_pdf(pdf: Path, config: Config, output_dir: Path, processed_dir: Path,
-                errors_dir: Path, logger, overwrite: bool) -> None:
+                errors_dir: Path, logger, overwrite: bool) -> tuple[str, str]:
+    """Convierte un PDF y lo archiva. Devuelve ("ok", nombre_md) o ("error", detalle)."""
     logger.info("Nuevo PDF: %s", pdf.name)
     out = output_dir / f"{pdf.stem}.md"
     if out.exists() and not overwrite:
@@ -59,6 +60,7 @@ def process_pdf(pdf: Path, config: Config, output_dir: Path, processed_dir: Path
             _write_warnings(errors_dir, pdf, result)
         shutil.move(str(pdf), str(_unique(processed_dir / pdf.name)))
         logger.info("  OK    %s   (original -> %s/)", out.name, processed_dir.name)
+        return "ok", out.name
     except Exception as exc:
         record_failure(errors_dir, pdf, exc)
         try:
@@ -67,10 +69,26 @@ def process_pdf(pdf: Path, config: Config, output_dir: Path, processed_dir: Path
             pass
         logger.error("  FALLO %s  (%s: %s)  (movido a %s/)",
                      pdf.name, exc.__class__.__name__, exc, errors_dir.name)
+        return "error", f"{exc.__class__.__name__}: {exc}"
+
+
+def _responsive_sleep(interval: float, stop_event) -> None:
+    """Duerme `interval` segundos pero atendiendo la señal de parada cada 0.2s."""
+    end = time.monotonic() + interval
+    while time.monotonic() < end:
+        if stop_event is not None and stop_event.is_set():
+            return
+        time.sleep(min(0.2, max(0.0, end - time.monotonic())))
 
 
 def watch(config: Config, watch_dir: Path, output_dir: Path, processed_dir: Path,
-          errors_dir: Path, interval: float, logger, overwrite: bool) -> None:
+          errors_dir: Path, interval: float, logger, overwrite: bool,
+          stop_event=None, on_event=None) -> None:
+    """Bucle de vigilancia.
+
+    ``stop_event`` (threading.Event) permite detenerlo desde otro hilo (la GUI).
+    ``on_event(kind, a, b)`` notifica actividad: kinds "started"/"ok"/"error"/"stopped".
+    """
     for d in (watch_dir, output_dir, processed_dir, errors_dir):
         d.mkdir(parents=True, exist_ok=True)
 
@@ -79,11 +97,19 @@ def watch(config: Config, watch_dir: Path, output_dir: Path, processed_dir: Path
     logger.info("Salida:     %s", output_dir)
     logger.info("Procesados: %s", processed_dir)
     logger.info("Revisando cada %ss. Pulsa Ctrl+C para detener.\n", interval)
+    if on_event:
+        on_event("started", str(watch_dir), str(output_dir))
 
     sizes: dict[Path, int] = {}
     stable: dict[Path, int] = {}
-    while True:
-        for pdf in sorted(watch_dir.glob("*.pdf")):
+    while not (stop_event is not None and stop_event.is_set()):
+        try:
+            pdfs = sorted(watch_dir.glob("*.pdf"))
+        except OSError:
+            pdfs = []
+        for pdf in pdfs:
+            if stop_event is not None and stop_event.is_set():
+                break
             try:
                 size = pdf.stat().st_size
             except OSError:
@@ -96,11 +122,16 @@ def watch(config: Config, watch_dir: Path, output_dir: Path, processed_dir: Path
             sizes[pdf] = size
 
             if stable.get(pdf, 0) >= 1:   # mismo tamaño en 2 lecturas seguidas
-                process_pdf(pdf, config, output_dir, processed_dir, errors_dir,
-                            logger, overwrite)
+                status, info = process_pdf(pdf, config, output_dir, processed_dir,
+                                           errors_dir, logger, overwrite)
                 sizes.pop(pdf, None)
                 stable.pop(pdf, None)
-        time.sleep(interval)
+                if on_event:
+                    on_event(status, pdf.name, info)
+        _responsive_sleep(interval, stop_event)
+
+    if on_event:
+        on_event("stopped", "", "")
 
 
 def main(argv=None) -> int:

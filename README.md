@@ -308,12 +308,18 @@ Doble clic en **`interfaz.bat`**, o bien:
 python gui.py
 ```
 
-Se abre una ventana donde puedes: **agregar PDFs o una carpeta**, elegir la carpeta
-de salida, marcar opciones (tablas, cabeceras/pies, idioma OCR, DPI…), pulsar
-**Convertir** y ver el **progreso y el resultado** por archivo. Botones para abrir
-la carpeta de salida y la de errores. La conversión corre en segundo plano (la
-ventana no se congela) y se puede **cancelar**. No necesita dependencias extra
-(Tkinter viene con Python).
+La ventana tiene **dos pestañas**:
+
+- **Convertir archivos:** agrega PDFs o una carpeta, elige la carpeta de salida,
+  pulsa **Convertir** y ve el progreso y el resultado por archivo. Se puede
+  **cancelar** y hay botones para abrir la carpeta de salida y la de errores.
+- **Vigilar carpeta:** elige con botones la carpeta de **ENTRADA** y la de
+  **SALIDA** (y la de procesados), pulsa **Iniciar vigilancia** y cada PDF que
+  llegue a la entrada se convierte solo. **Detener** cuando quieras.
+
+Debajo hay opciones comunes (tablas, cabeceras/pies, idioma OCR, DPI…). Todo el
+trabajo corre en segundo plano (la ventana no se congela) y no necesita
+dependencias extra (Tkinter viene con Python).
 
 ### Opción B — Línea de comandos
 
