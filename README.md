@@ -177,14 +177,18 @@ que los niveles de título salen consistentes en todo el `.md`.
 PDF a MD/
 ├── gui.py                  # interfaz gráfica (Tkinter)
 ├── interfaz.bat            # lanzador (doble clic) de la interfaz
+├── watch.py                # modo automático (vigila una carpeta)
+├── vigilar.bat             # lanzador (doble clic) del modo automático
 ├── main.py                 # punto de entrada (CLI)
 ├── config.yaml             # configuración
 ├── requirements.txt
 ├── README.md
 ├── tessdata/               # idiomas de Tesseract (spa.traineddata)
 ├── documentos/
-│   ├── originales/         # ← PON AQUÍ TUS PDF
+│   ├── originales/         # ← PDF para el modo CLI/interfaz
+│   ├── entrada/            # ← PDF nuevos para el modo automático
 │   ├── markdown/           # → salida .md
+│   ├── procesados/         # → PDF ya convertidos (modo automático)
 │   └── errores/            # → logs de fallos y avisos
 ├── src/pdf2md/             # el paquete
 │   ├── detector.py  text_extractor.py  ocr.py
@@ -324,6 +328,29 @@ python main.py -i entrada -o salida --recursive --overwrite
 # Ajustes de OCR:
 python main.py --ocr-lang spa+eng --dpi 400
 ```
+
+### Opción C — Modo automático (carpeta vigilada)
+
+Doble clic en **`vigilar.bat`**, o bien:
+
+```bash
+python watch.py
+```
+
+Deja la ventana abierta: cada PDF que copies o guardes en **`documentos/entrada/`**
+se convierte solo, el `.md` aparece en **`documentos/markdown/`** y el PDF original
+se mueve a **`documentos/procesados/`** (si algo falla, va a `documentos/errores/`).
+Detecta cuándo el archivo terminó de copiarse (comprueba que su tamaño se estabiliza),
+así que nunca convierte un PDF a medio copiar. Pulsa **Ctrl+C** o cierra la ventana
+para detenerlo. Carpetas e intervalo son configurables:
+
+```bash
+python watch.py -w documentos/entrada -o documentos/markdown --interval 5
+```
+
+> **Que arranque solo con Windows:** crea una tarea en el *Programador de tareas*
+> (al iniciar sesión → `vigilar.bat`), o coloca un acceso directo a `vigilar.bat`
+> en la carpeta *Inicio* (`Win+R` → `shell:startup`).
 
 Comprobar la lógica sin PDFs ni Tesseract:
 

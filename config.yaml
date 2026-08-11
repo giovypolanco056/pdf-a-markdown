@@ -29,3 +29,7 @@ include_page_markers: true   # inserta comentarios <!-- página N --> (útil par
 # --- Procesamiento por lotes ---
 recursive: false      # buscar PDFs también en subcarpetas
 overwrite: false      # sobrescribir los .md que ya existan
+
+# --- Modo automático (vigilancia con watch.py) ---
+watch_dir: "documentos/entrada"        # deja aquí los PDF nuevos y se convierten solos
+processed_dir: "documentos/procesados" # el PDF original se mueve aquí tras convertirlo

@@ -39,6 +39,10 @@ class Config:
     recursive: bool = False
     overwrite: bool = False
 
+    # Modo automático (vigilancia de carpeta)
+    watch_dir: str = "documentos/entrada"        # se dejan aquí los PDF nuevos
+    processed_dir: str = "documentos/procesados"  # los PDF ya convertidos se mueven aquí
+
     @classmethod
     def load(cls, path: str | Path | None = "config.yaml") -> "Config":
         cfg = cls()

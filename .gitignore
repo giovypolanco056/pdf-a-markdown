@@ -24,6 +24,10 @@ tessdata/*.traineddata
 documentos/originales/*
 documentos/markdown/*
 documentos/errores/*
+documentos/entrada/*
+documentos/procesados/*
 !documentos/originales/.gitkeep
 !documentos/markdown/.gitkeep
 !documentos/errores/.gitkeep
+!documentos/entrada/.gitkeep
+!documentos/procesados/.gitkeep
