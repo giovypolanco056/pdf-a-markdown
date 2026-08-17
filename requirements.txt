@@ -1,20 +1,29 @@
-# ---- Núcleo (obligatorio) ----
-PyMuPDF>=1.24        # extracción de texto, render de páginas y detección de tablas
-Pillow>=10.0         # manejo de imágenes para el OCR
-pytesseract>=0.3.10  # interfaz Python para el motor Tesseract OCR
-PyYAML>=6.0          # lectura de config.yaml (si falta, se usan los valores por defecto)
-tqdm>=4.66           # barra de progreso en el procesamiento por lotes
+# Requerimientos de "Documentos → Markdown" (Fase 1)
+# Instala todo de golpe con:   pip install -r requirements.txt
+#
+# IMPORTANTE: instálalos en el MISMO Python con el que ejecutas el programa.
+# Si usas los .bat (doble clic), ese es tu Python global (aquí: C:\Python314).
 
-# ---- OCR: requisito del SISTEMA (NO se instala con pip) ----
-# Hay que instalar el motor Tesseract y el idioma español (spa) aparte:
-#   Windows:  winget install UB-Mannheim.TesseractOCR
-#             (o el instalador de https://github.com/UB-Mannheim/tesseract/wiki)
-#   Linux:    sudo apt install tesseract-ocr tesseract-ocr-spa
-#   macOS:    brew install tesseract tesseract-lang
+# --- Leer PDF ---
+PyMuPDF==1.28.2        # abre PDF: texto, fuentes y render de página para OCR
 
-# ---- Alternativas / mejoras opcionales (comentadas) ----
-# pdfplumber>=0.11      # extracción de tablas difíciles (alternativa a PyMuPDF)
-# ocrmypdf>=16          # añade una capa de texto a PDFs escaneados
-# pyspellchecker>=0.8   # corrección ortográfica del OCR en español
-# docling               # conversor PDF->MD de alta calidad (ver sección del README)
-# marker-pdf            # conversor PDF->MD de alta calidad (ver sección del README)
+# --- OCR (solo para PDF escaneados) ---
+pytesseract==0.3.13    # puente a Tesseract (Tesseract se instala aparte, ver NOTA)
+Pillow==12.2.0         # manejo de imágenes para el OCR
+
+# --- Leer Word y Excel ---
+python-docx==1.2.0     # abre Word (.docx): títulos, listas, tablas
+openpyxl==3.1.5        # abre Excel (.xlsx): cada hoja como tabla
+
+# --- Utilidades ---
+PyYAML==6.0.3          # lee config.yaml
+tqdm==4.68.4           # barra de progreso en la terminal
+
+# ==========================================================================
+# NO se instalan con pip (van aparte):
+#   * Python 3.10 o superior  (probado en 3.14.5).
+#   * Tkinter  -> la interfaz gráfica; viene INCLUIDO con Python en Windows.
+#   * Tesseract OCR 5.x  -> solo si conviertes PDF escaneados.
+#       Instalar:  winget install UB-Mannheim.TesseractOCR
+#       Idioma español: colocar spa.traineddata en la carpeta  tessdata/
+# ==========================================================================

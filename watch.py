@@ -9,6 +9,11 @@ Cuando un PDF llega a la carpeta de ENTRADA:
 Ejecutar:  python watch.py          (Ctrl+C para detener)
            o doble clic en  vigilar.bat
 
+>>> PARA CAMBIAR LAS CARPETAS <<<
+    Edita config.yaml:  watch_dir  (carpeta de ENTRADA) y  output_dir (SALIDA).
+    O al ejecutar, pasalas directamente:
+        python watch.py -w "C:\\ruta\\entrada" -o "C:\\ruta\\salida"
+
 Detecta cuándo un archivo terminó de copiarse comprobando que su tamaño se
 mantiene estable entre dos revisiones (evita convertir PDFs a medio copiar).
 """
@@ -23,10 +28,11 @@ from pathlib import Path
 PROJECT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROJECT_DIR / "src"))
 
+from pdf2md import vault                               # noqa: E402
 from pdf2md.config import Config                       # noqa: E402
 from pdf2md.errors import get_logger, record_failure   # noqa: E402
 from pdf2md.markdown_writer import render_document      # noqa: E402
-from pdf2md.pipeline import convert_pdf, _write_warnings  # noqa: E402
+from pdf2md.pipeline import convert_file, _write_warnings  # noqa: E402
 
 
 def _abs(p) -> Path:
@@ -46,21 +52,54 @@ def _unique(path: Path) -> Path:
         i += 1
 
 
+def _publicar_y_organizar(md_path: Path, config: Config) -> None:
+    """Sube el .md recién creado a la bóveda de Obsidian y reorganiza por formato.
+
+    Si ``auto_relate`` está activo, además teje las relaciones semánticas entre
+    todas las notas (tema, proyecto, entidad, evento) tras organizar por formato.
+    """
+    vault_dir = _abs(config.vault_dir)
+    subdir = config.vault_subdir or ""
+    dest = (vault_dir / subdir) if subdir else vault_dir
+    dest.mkdir(parents=True, exist_ok=True)
+    tags = [config.vault_tag] if getattr(config, "vault_tag", None) else []
+    vault.publish_markdown_file(md_path, dest, tags, overwrite=True)
+    vault.organizar_boveda(vault_dir, subdir)
+    if getattr(config, "auto_relate", False):
+        # Import perezoso: la vigilancia no depende de la capa semántica salvo aquí.
+        from pdf2md.semantics.relate import RelateParams, relacionar_boveda
+        relacionar_boveda(vault_dir, subdir, params=RelateParams.from_config(config))
+
+
 def process_pdf(pdf: Path, config: Config, output_dir: Path, processed_dir: Path,
                 errors_dir: Path, logger, overwrite: bool) -> tuple[str, str]:
-    """Convierte un PDF y lo archiva. Devuelve ("ok", nombre_md) o ("error", detalle)."""
-    logger.info("Nuevo PDF: %s", pdf.name)
+    """Convierte un archivo y lo archiva. Devuelve ("ok", detalle) o ("error", detalle).
+
+    Si hay una bóveda configurada (``vault_dir``), además publica el .md en
+    Obsidian y reorganiza la bóveda por formato — el ciclo completo automático.
+    """
+    logger.info("Nuevo archivo: %s", pdf.name)
     out = output_dir / f"{pdf.stem}.md"
     if out.exists() and not overwrite:
         out = _unique(out)
     try:
-        result = convert_pdf(pdf, config)
+        result = convert_file(pdf, config)
         out.write_text(render_document(result, config.include_page_markers), encoding="utf-8")
         if result.warnings or any(p.warnings for p in result.pages):
             _write_warnings(errors_dir, pdf, result)
+        obsidian = bool(getattr(config, "vault_dir", None))
+        if obsidian:
+            try:
+                _publicar_y_organizar(out, config)
+            except Exception as exc:   # que un fallo en Obsidian no pierda la conversión
+                logger.error("  (aviso) no se pudo enviar a Obsidian: %s", exc)
+                obsidian = False
         shutil.move(str(pdf), str(_unique(processed_dir / pdf.name)))
-        logger.info("  OK    %s   (original -> %s/)", out.name, processed_dir.name)
-        return "ok", out.name
+        relacionado = obsidian and getattr(config, "auto_relate", False)
+        sufijo = ("  ->  Obsidian (organizado y relacionado)" if relacionado
+                  else "  ->  Obsidian (organizado)" if obsidian else "")
+        logger.info("  OK    %s%s   (original -> %s/)", out.name, sufijo, processed_dir.name)
+        return "ok", out.name + ("  →  Obsidian" if obsidian else "")
     except Exception as exc:
         record_failure(errors_dir, pdf, exc)
         try:
@@ -96,6 +135,9 @@ def watch(config: Config, watch_dir: Path, output_dir: Path, processed_dir: Path
     logger.info("Entrada:    %s", watch_dir)
     logger.info("Salida:     %s", output_dir)
     logger.info("Procesados: %s", processed_dir)
+    if getattr(config, "vault_dir", None):
+        logger.info("Obsidian:   %s  (auto: publicar + organizar por formato)",
+                    _abs(config.vault_dir))
     logger.info("Revisando cada %ss. Pulsa Ctrl+C para detener.\n", interval)
     if on_event:
         on_event("started", str(watch_dir), str(output_dir))
@@ -104,7 +146,9 @@ def watch(config: Config, watch_dir: Path, output_dir: Path, processed_dir: Path
     stable: dict[Path, int] = {}
     while not (stop_event is not None and stop_event.is_set()):
         try:
-            pdfs = sorted(watch_dir.glob("*.pdf"))
+            pdfs = sorted(p for pat in ("*.pdf", "*.docx", "*.xlsx")
+                          for p in watch_dir.glob(pat)
+                          if not p.name.startswith("~$"))   # ignora temporales de Office
         except OSError:
             pdfs = []
         for pdf in pdfs:
@@ -152,6 +196,8 @@ def main(argv=None) -> int:
     if config.tessdata_dir:                    # rutas absolutas: funciona desde cualquier CWD
         config.tessdata_dir = str(_abs(config.tessdata_dir))
     config.errors_dir = str(_abs(config.errors_dir))
+    if config.vault_dir:                       # bóveda absoluta para publicar desde cualquier CWD
+        config.vault_dir = str(_abs(config.vault_dir))
 
     logger = get_logger()
     try:

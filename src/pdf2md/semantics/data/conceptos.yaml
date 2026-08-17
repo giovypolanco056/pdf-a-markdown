@@ -1,0 +1,227 @@
+# ============================================================================
+#  LÉXICO DE CONCEPTOS Y EVENTOS  (conocimiento del dominio — EDITABLE)
+# ============================================================================
+# Aquí vive la "inteligencia" del sistema de relaciones. NO hace falta tocar
+# código para que aprenda dominios nuevos: basta añadir conceptos aquí.
+#
+# Cómo funciona cada concepto:
+#   <id>:
+#     label:    nombre legible (para tags y mapas)
+#     padre:    (opcional) concepto más general del que "cuelga". Es el PUENTE
+#               semántico: dos conceptos hermanos se relacionan por su padre.
+#     terminos: palabras o frases equivalentes. Se comparan sin acentos, en
+#               minúsculas y con stemming, así que no hace falta poner todas las
+#               variantes; con la forma base suele bastar.
+#
+# Regla de oro: pon términos DISTINTIVOS del concepto. Cuanto más específicos,
+# más precisas serán las relaciones (prioridad del proyecto: precisión > cantidad).
+# ============================================================================
+
+conceptos:
+
+  # ---------------------------------------------------------------- ENERGÍA --
+  energia:
+    label: "Energía"
+    terminos:
+      - energia
+      - energetico
+      - generacion electrica
+      - sector electrico
+      - red electrica
+      - megavatio
+      - kilovatio
+      - matriz energetica
+
+  hidroelectrica:
+    label: "Energía hidroeléctrica"
+    padre: energia
+    terminos:
+      - hidroelectrica
+      - central hidroelectrica
+      - hidraulica
+      - presa
+      - embalse
+      - turbina
+      - caudal
+      - salto de agua
+      - aprovechamiento hidraulico
+
+  hidrobombeo:
+    label: "Hidrobombeo"
+    padre: hidroelectrica
+    terminos:
+      - hidrobombeo
+      - bombeo hidroelectrico
+      - bombeo hidraulico
+      - central de bombeo
+      - planta de bombeo
+      - central reversible
+      - centrales de bombeo
+      - estacion de bombeo
+      - pumped hydro
+      - almacenamiento por bombeo
+
+  almacenamiento-energetico:
+    label: "Almacenamiento energético"
+    padre: energia
+    terminos:
+      - almacenamiento energetico
+      - almacenamiento de energia
+      - almacenar energia
+      - almacenamiento mediante agua
+      - embalse superior
+      - embalse inferior
+      - bateria
+      - baterias
+      - reserva energetica
+      - gestion de la demanda
+
+  # -------------------------------------------------------- CIBERSEGURIDAD --
+  ciberseguridad:
+    label: "Ciberseguridad"
+    terminos:
+      - ciberseguridad
+      - seguridad informatica
+      - ciberespacio
+      - ciberdefensa
+      - incidente de seguridad
+      - vulnerabilidad
+      - amenaza
+      - centro nacional de ciberseguridad
+      - estrategia nacional de ciberseguridad
+
+  normativa:
+    label: "Normativa y decretos"
+    # (fuera "artículo"/"resolución"/"disposición": aparecen en casi cualquier
+    #  documento formal y no distinguen el tema)
+    terminos:
+      - decreto
+      - reglamento
+      - marco normativo
+      - marco legal
+      - decreto ejecutivo
+
+  # ------------------------------------------------------------ CONTABILIDAD --
+  contabilidad:
+    label: "Contabilidad y finanzas"
+    # (se evitan palabras sueltas ambiguas como "activo"/"pasivo"/"balance",
+    #  que aparecen fuera de contabilidad)
+    terminos:
+      - contabilidad
+      - contable
+      - ciclo contable
+      - estados financieros
+      - asiento contable
+      - libro diario
+      - libro mayor
+      - nic
+      - niif
+      - normas internacionales de contabilidad
+
+  # ------------------------------------------------------------------- MUN --
+  mun:
+    label: "Modelo de Naciones Unidas (MUN)"
+    # OJO: términos DISTINTIVOS de MUN. Se evitan palabras ambiguas como
+    # "delegado", "comité" o "debate" que también aparecen en actas de energía,
+    # contabilidad, etc. (bajarían la precisión).
+    terminos:
+      - mun
+      - modelo de naciones unidas
+      - monudis
+      - nhmun
+      - comite de delegados
+
+  networking:
+    label: "Networking profesional"
+    padre: mun
+    terminos:
+      - networking
+      - contactos profesionales
+      - linkedin
+      - relaciones profesionales
+      - red de contactos
+
+  # ----------------------------------------------------- ACCESIBILIDAD WEB --
+  accesibilidad-web:
+    label: "Accesibilidad y usabilidad web"
+    terminos:
+      - accesibilidad
+      - accesibilidad web
+      - usabilidad
+      - wcag
+      - experiencia de usuario
+      - interfaz
+      - evaluacion de usabilidad
+
+  # --------------------------------------------------------- INVESTIGACIÓN --
+  investigacion:
+    label: "Metodología de investigación"
+    terminos:
+      - investigacion
+      - metodologia
+      - planteamiento del problema
+      - marco teorico
+      - objetivos de investigacion
+      - hipotesis
+      - area tematica
+      - delimitacion
+
+  # -------------------------------------------------------------- ACADÉMICO --
+  academico:
+    label: "Ámbito académico"
+    terminos:
+      - universidad
+      - pasantia
+      - manual academico
+      - estudiante universitario
+      - facultad
+      - catedra
+      - plan de estudios
+
+  # ------------------------------------------------------ RECURSOS HUMANOS --
+  # (útil como control: NO debe relacionarse con energía en las pruebas)
+  recursos-humanos:
+    label: "Recursos humanos"
+    # (fuera "personal"/"empleado", demasiado comunes)
+    terminos:
+      - recursos humanos
+      - nomina
+      - vacaciones
+      - contratacion
+      - salario
+      - permiso laboral
+      - evaluacion de desempeno
+
+
+# ============================================================================
+#  TIPOS DE EVENTO  (¿qué CLASE de documento es?)
+# ============================================================================
+# Se usa como señal DÉBIL: por sí solo, "mismo tipo de evento" NO crea un enlace
+# (si no, todos los informes se enlazarían entre sí). Sólo refuerza relaciones
+# que ya tienen otra señal en común.
+
+eventos:
+
+  reunion:
+    terminos: [reunion, reuniones, minuta, acta, agenda, convocatoria, asistentes, acuerdos, orden del dia]
+
+  informe:
+    terminos: [informe, informes, reporte, analisis, hallazgos, conclusiones, recomendaciones, memoria]
+
+  incidente:
+    terminos: [incidente, incidencia, falla, averia, interrupcion, emergencia, siniestro, anomalia]
+
+  proyecto:
+    terminos: [proyecto, alcance, cronograma, hito, entregable, presupuesto, fase del proyecto, plan de trabajo]
+
+  mantenimiento:
+    terminos: [mantenimiento, reparacion, preventivo, correctivo, revision tecnica, puesta a punto]
+
+  visita:
+    terminos: [visita, recorrido, gira, inspeccion, visita tecnica, trabajo de campo]
+
+  solicitud:
+    terminos: [solicitud, peticion, requerimiento, tramite, formulario, oficio]
+
+  capacitacion:
+    terminos: [capacitacion, taller, curso, formacion, entrenamiento, seminario, charla]

@@ -29,7 +29,7 @@ sys.path.insert(0, str(PROJECT_DIR / "src"))  # para importar el paquete pdf2md
 import watch as watch_mod                                   # noqa: E402
 from pdf2md.config import Config                            # noqa: E402
 from pdf2md.errors import get_logger                        # noqa: E402
-from pdf2md.pipeline import convert_path, find_pdfs         # noqa: E402
+from pdf2md.pipeline import SUPPORTED_EXTS, convert_path, find_documents  # noqa: E402
 
 
 def _abs(p) -> Path:
@@ -71,7 +71,7 @@ class ConverterGUI:
 
         self._defaults = Config.load(str(PROJECT_DIR / "config.yaml"))
 
-        root.title("PDF → Markdown")
+        root.title("Documentos → Markdown")
         root.geometry("800x740")
         root.minsize(680, 660)
 
@@ -81,7 +81,7 @@ class ConverterGUI:
 
     # ================================================================== UI ==
     def _build_ui(self) -> None:
-        ttk.Label(self.root, text="PDF → Markdown",
+        ttk.Label(self.root, text="Documentos → Markdown",
                   font=("Segoe UI", 16, "bold")).pack(anchor="w", padx=10, pady=(10, 2))
 
         nb = ttk.Notebook(self.root)
@@ -103,7 +103,7 @@ class ConverterGUI:
         self._build_log(self.root)
 
     def _build_convert_tab(self, parent: ttk.Frame) -> None:
-        frm_in = ttk.LabelFrame(parent, text="Archivos PDF a convertir")
+        frm_in = ttk.LabelFrame(parent, text="Archivos a convertir  (PDF · Word · Excel)")
         frm_in.pack(fill="both", expand=True, padx=8, pady=(8, 4))
 
         lst_wrap = ttk.Frame(frm_in)
@@ -116,7 +116,7 @@ class ConverterGUI:
 
         btns = ttk.Frame(frm_in)
         btns.pack(side="right", fill="y", padx=8, pady=8)
-        ttk.Button(btns, text="Agregar PDFs…", command=self.add_files).pack(fill="x", pady=2)
+        ttk.Button(btns, text="Agregar archivos…", command=self.add_files).pack(fill="x", pady=2)
         ttk.Button(btns, text="Agregar carpeta…", command=self.add_folder).pack(fill="x", pady=2)
         ttk.Button(btns, text="Quitar selección", command=self.remove_selected).pack(fill="x", pady=2)
         ttk.Button(btns, text="Vaciar lista", command=self.clear_files).pack(fill="x", pady=2)
@@ -143,15 +143,17 @@ class ConverterGUI:
         ttk.Button(frm_go, text="Abrir errores", command=self.open_errors).pack(side="right", padx=6)
 
     def _build_watch_tab(self, parent: ttk.Frame) -> None:
-        info = ("Elige la carpeta de ENTRADA (donde dejarás los PDF nuevos) y la de "
-                "SALIDA (.md). Con la vigilancia activa, cada PDF que llegue se convierte "
-                "solo y su original pasa a 'procesados'.")
+        info = ("Elige la carpeta de ENTRADA (donde dejarás los archivos nuevos) y la de "
+                "SALIDA (.md). Con la vigilancia activa, cada PDF, Word o Excel que llegue "
+                "se convierte solo y su original pasa a 'procesados'.")
         ttk.Label(parent, text=info, wraplength=740, justify="left").pack(
             anchor="w", padx=10, pady=(10, 6))
 
         self.w_in_var = tk.StringVar(value=str(_abs(self._defaults.watch_dir)))
         self.w_out_var = tk.StringVar(value=str(_abs(self._defaults.output_dir)))
         self.w_proc_var = tk.StringVar(value=str(_abs(self._defaults.processed_dir)))
+        self.w_vault_var = tk.StringVar(value=str(self._defaults.vault_dir or ""))
+        self.obsidian_var = tk.BooleanVar(value=bool(self._defaults.vault_dir))
 
         grid = ttk.Frame(parent)
         grid.pack(fill="x", padx=10, pady=4)
@@ -159,6 +161,12 @@ class ConverterGUI:
         self._folder_row(grid, 0, "Carpeta de ENTRADA:", self.w_in_var, self.choose_watch_in)
         self._folder_row(grid, 1, "Carpeta de SALIDA (.md):", self.w_out_var, self.choose_watch_out)
         self._folder_row(grid, 2, "Carpeta de PROCESADOS:", self.w_proc_var, self.choose_watch_proc)
+        self._folder_row(grid, 3, "Bóveda Obsidian:", self.w_vault_var, self.choose_watch_vault)
+
+        ttk.Checkbutton(
+            parent, variable=self.obsidian_var,
+            text="Al convertir, enviar a Obsidian y organizar por formato (PDF · Word · Excel)"
+        ).pack(anchor="w", padx=12, pady=(2, 0))
 
         row_i = ttk.Frame(parent)
         row_i.pack(fill="x", padx=10, pady=(4, 8))
@@ -225,20 +233,22 @@ class ConverterGUI:
     # ============================================================ archivos ==
     def add_files(self) -> None:
         paths = filedialog.askopenfilenames(
-            title="Selecciona uno o varios PDF",
-            filetypes=[("PDF", "*.pdf"), ("Todos", "*.*")])
+            title="Selecciona documentos (PDF, Word o Excel)",
+            filetypes=[("Documentos", "*.pdf *.docx *.xlsx"),
+                       ("PDF", "*.pdf"), ("Word", "*.docx"),
+                       ("Excel", "*.xlsx"), ("Todos", "*.*")])
         self._add([Path(p) for p in paths])
 
     def add_folder(self) -> None:
-        folder = filedialog.askdirectory(title="Selecciona una carpeta con PDFs")
+        folder = filedialog.askdirectory(title="Selecciona una carpeta con documentos")
         if folder:
-            self._add(find_pdfs(Path(folder), self.recursive_var.get()))
+            self._add(find_documents(Path(folder), self.recursive_var.get()))
 
     def _add(self, paths: list[Path]) -> None:
         existing = set(self.files)
         added = 0
         for p in paths:
-            if p.suffix.lower() == ".pdf" and p not in existing:
+            if p.suffix.lower() in SUPPORTED_EXTS and p not in existing:
                 self.files.append(p)
                 existing.add(p)
                 added += 1
@@ -273,6 +283,9 @@ class ConverterGUI:
     def choose_watch_proc(self) -> None:
         self._pick_into(self.w_proc_var)
 
+    def choose_watch_vault(self) -> None:
+        self._pick_into(self.w_vault_var)
+
     def _pick_into(self, var: tk.StringVar) -> None:
         folder = filedialog.askdirectory(title="Selecciona una carpeta",
                                          initialdir=var.get() or str(PROJECT_DIR))
@@ -302,7 +315,7 @@ class ConverterGUI:
         if self.worker and self.worker.is_alive():
             return
         if not self.files:
-            messagebox.showwarning("Sin archivos", "Agrega al menos un PDF.")
+            messagebox.showwarning("Sin archivos", "Agrega al menos un documento.")
             return
 
         cfg = self._config_from_options(self.output_var.get())
@@ -310,7 +323,7 @@ class ConverterGUI:
         self._set_running(True)
         self.progress.configure(mode="determinate", value=0, maximum=len(self.files))
         self._clear_log()
-        self._log(f"Convirtiendo {len(self.files)} PDF…\n\n", "info")
+        self._log(f"Convirtiendo {len(self.files)} documento(s)…\n\n", "info")
 
         files = list(self.files)
 
@@ -349,6 +362,10 @@ class ConverterGUI:
             interval = 3.0
 
         cfg = self._config_from_options(salida)
+        if self.obsidian_var.get() and self.w_vault_var.get().strip():
+            cfg.vault_dir = self.w_vault_var.get().strip()   # ciclo completo hacia Obsidian
+        else:
+            cfg.vault_dir = None
         overwrite = self.overwrite_var.get()
         entrada_p, salida_p = _abs(entrada), _abs(salida)
         proc_p, errors_p = _abs(proc), _abs(cfg.errors_dir)

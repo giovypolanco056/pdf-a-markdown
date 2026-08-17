@@ -3,7 +3,7 @@
 
 # --- Carpetas ---
 input_dir: "documentos/originales"
-output_dir: "documentos/markdown"
+output_dir: "C:/Users/giovy/Downloads/PDF_Boveda/PDF importados"    # <=== CAMBIA AQUI la carpeta de SALIDA (.md)
 errors_dir: "documentos/errores"
 
 # --- Idioma ---
@@ -30,6 +30,38 @@ include_page_markers: true   # inserta comentarios <!-- página N --> (útil par
 recursive: false      # buscar PDFs también en subcarpetas
 overwrite: false      # sobrescribir los .md que ya existan
 
+# ==========================================================================
+#  CARPETAS DEL MODO AUTOMATICO  ->  cambialas en estas dos lineas:
+#    * ENTRADA (PDF nuevos):  watch_dir   (aqui abajo)
+#    * SALIDA  (.md):         output_dir  (mas arriba, en la seccion Carpetas)
+# ==========================================================================
 # --- Modo automático (vigilancia con watch.py) ---
-watch_dir: "documentos/entrada"        # deja aquí los PDF nuevos y se convierten solos
+watch_dir: "documentos/entrada"        # <=== CAMBIA AQUI la carpeta de ENTRADA
 processed_dir: "documentos/procesados" # el PDF original se mueve aquí tras convertirlo
+
+# ==========================================================================
+#  PUBLICAR EN OBSIDIAN  (Fase 2)  ->  python publicar.py  o  publicar.bat
+#  Una bóveda de Obsidian es sólo una carpeta con archivos .md.
+# ==========================================================================
+vault_dir: "C:/Users/giovy/Downloads/PDF_Boveda"   # <=== tu bóveda de Obsidian (null = desactivar)
+vault_subdir: "PDF importados"         # subcarpeta dentro de la bóveda ("" = raíz)
+vault_tag: "pdf-importado"             # tag que se añade a cada nota publicada
+
+# ==========================================================================
+#  RELACIONES SEMÁNTICAS  (Fase 2.6)  ->  python relacionar.py  o  relacionar.bat
+#  Detecta de qué habla cada nota y la enlaza con las relacionadas (tema,
+#  proyecto, entidad, evento) aunque no usen las mismas palabras. Escribe tags,
+#  keywords, la propiedad `related` y una sección "🔗 Notas relacionadas", y crea
+#  mapas por tema (Tema - X). NO es destructivo: sólo reescribe el front matter
+#  y esa sección marcada.
+# ==========================================================================
+auto_relate: false           # true = en modo vigilancia, relacionar tras cada archivo nuevo
+relate_threshold: 0.22       # confianza mínima (0-1). Súbelo para MENOS enlaces pero más seguros
+relate_top_k: 6              # máximo de enlaces por nota (evita saturar el grafo)
+relate_keywords: 8           # nº de palabras clave por nota
+relate_lexicon: null         # ruta a tu propio conceptos.yaml (null = usa el de serie)
+# --- Embeddings opcionales (similitud semántica con un modelo). Requiere
+#     instalar sentence-transformers, que hoy NO tiene versión para Python 3.14. ---
+relate_use_embeddings: false
+relate_embed_model: null     # p.ej. "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+relate_embed_weight: 0.40

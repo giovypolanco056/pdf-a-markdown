@@ -117,6 +117,37 @@ def _build_metadata(doc, pdf_path: Path, result: DocumentResult, config: Config)
 
 
 # --------------------------------------------------------------------------- #
+# Despachador por formato (PDF / Word / Excel)
+# --------------------------------------------------------------------------- #
+SUPPORTED_EXTS = (".pdf", ".docx", ".xlsx")
+
+
+def convert_file(path: Path, config: Config) -> DocumentResult:
+    """Convierte un documento a ``DocumentResult`` según su extensión.
+
+    Reúne los distintos lectores (PDF, Word, Excel) tras una sola función para
+    que el resto del pipeline no tenga que saber de formatos. Los lectores de
+    Word/Excel se importan de forma diferida: sólo se necesitan sus librerías
+    si de verdad conviertes uno de esos formatos.
+    """
+    ext = Path(path).suffix.lower()
+    if ext == ".pdf":
+        return convert_pdf(Path(path), config)
+    if ext == ".docx":
+        from .docx_extractor import convert_docx
+        return convert_docx(Path(path), config)
+    if ext == ".xlsx":
+        from .xlsx_extractor import convert_xlsx
+        return convert_xlsx(Path(path), config)
+    if ext in (".doc", ".xls"):
+        nuevo = ".docx" if ext == ".doc" else ".xlsx"
+        raise PDFConversionError(
+            f"El formato {ext} (Office antiguo) no está soportado. "
+            f"Ábrelo en Office y guárdalo como {nuevo}.")
+    raise PDFConversionError(f"Formato no soportado: {ext}")
+
+
+# --------------------------------------------------------------------------- #
 # Procesamiento por LOTES
 # --------------------------------------------------------------------------- #
 def find_pdfs(input_path: Path, recursive: bool = False) -> list[Path]:
@@ -126,6 +157,19 @@ def find_pdfs(input_path: Path, recursive: bool = False) -> list[Path]:
         return []
     pattern = "**/*.pdf" if recursive else "*.pdf"
     return sorted(input_path.glob(pattern))
+
+
+def find_documents(input_path: Path, recursive: bool = False) -> list[Path]:
+    """Como ``find_pdfs`` pero incluye también Word (.docx) y Excel (.xlsx)."""
+    if input_path.is_file():
+        return [input_path] if input_path.suffix.lower() in SUPPORTED_EXTS else []
+    if not input_path.exists():
+        return []
+    found: list[Path] = []
+    for ext in SUPPORTED_EXTS:
+        found.extend(p for p in input_path.glob(f"**/*{ext}" if recursive else f"*{ext}")
+                     if not p.name.startswith("~$"))   # ignora temporales de Office
+    return sorted(found)
 
 
 def convert_path(config: Config, input_override: str | None = None,
@@ -148,11 +192,11 @@ def convert_path(config: Config, input_override: str | None = None,
         pdfs = [Path(f) for f in files]
     else:
         input_path = Path(input_override or config.input_dir)
-        pdfs = find_pdfs(input_path, config.recursive)
+        pdfs = find_documents(input_path, config.recursive)
 
     total = len(pdfs)
     if not pdfs:
-        logger.warning("No se encontraron PDFs.")
+        logger.warning("No se encontraron documentos (PDF, Word o Excel).")
         return {"total": 0, "ok": 0, "failed": 0, "skipped": 0, "results": []}
 
     ok = failed = skipped = 0
@@ -173,7 +217,7 @@ def convert_path(config: Config, input_override: str | None = None,
                 on_progress(i + 1, total, pdf_path.name, "skip", "ya existe")
             continue
         try:
-            result = convert_pdf(pdf_path, config)
+            result = convert_file(pdf_path, config)
             out_file.write_text(render_document(result, config.include_page_markers),
                                 encoding="utf-8")
             warned = bool(result.warnings or any(p.warnings for p in result.pages))

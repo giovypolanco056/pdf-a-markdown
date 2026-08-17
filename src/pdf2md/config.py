@@ -43,6 +43,21 @@ class Config:
     watch_dir: str = "documentos/entrada"        # se dejan aquí los PDF nuevos
     processed_dir: str = "documentos/procesados"  # los PDF ya convertidos se mueven aquí
 
+    # Publicación a una bóveda de Obsidian (Fase 2)
+    vault_dir: str | None = None             # carpeta raíz de la bóveda (None = desactivado)
+    vault_subdir: str = "PDF importados"     # subcarpeta dentro de la bóveda
+    vault_tag: str = "pdf-importado"         # tag que se añade a cada nota publicada
+
+    # Relaciones semánticas entre notas (Fase 2.6) — script  relacionar.py
+    auto_relate: bool = False        # en modo vigilancia, relacionar tras organizar
+    relate_threshold: float = 0.22   # confianza mínima (0-1) para crear un enlace
+    relate_top_k: int = 6            # máx. enlaces por nota (evita saturar el grafo)
+    relate_keywords: int = 8         # nº de keywords por nota
+    relate_lexicon: str | None = None      # ruta a un conceptos.yaml propio (None = el de serie)
+    relate_use_embeddings: bool = False    # usar embeddings (requiere sentence-transformers)
+    relate_embed_model: str | None = None  # nombre del modelo de embeddings
+    relate_embed_weight: float = 0.40      # peso de la señal de embeddings (0-1)
+
     @classmethod
     def load(cls, path: str | Path | None = "config.yaml") -> "Config":
         cfg = cls()

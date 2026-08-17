@@ -19,6 +19,9 @@ env/
 # Datos de idioma de Tesseract (grandes; se descargan aparte)
 tessdata/*.traineddata
 
+# Documento personal en la raíz (no versionar). Bórralo de aquí si lo quieres subir.
+/Documentacion.pdf
+
 # Documentos del usuario: NO versionar (son datos personales/privados).
 # Se conserva SOLO la estructura de carpetas mediante los .gitkeep.
 documentos/originales/*

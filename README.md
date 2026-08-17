@@ -5,8 +5,16 @@ Es la **Fase 1** de un sistema RAG mayor. El objetivo aquí es **una sola cosa, 
 extraer el contenido con la máxima fidelidad y estructura posibles, porque *si la extracción
 inicial es mala, el RAG posterior también lo será*.
 
-> Esta versión **NO** incluye Obsidian, Graphite, embeddings, bases de datos vectoriales ni chatbot.
+> Esta versión **NO** incluye embeddings, bases de datos vectoriales ni chatbot.
 > La arquitectura ya está preparada para añadirlos (ver [§15](#15-arquitectura-preparada-para-rag)).
+
+> **Fases posteriores ya construidas** (fuera del alcance de este README, con su
+> propia documentación):
+> - **Fase 2 — Obsidian:** publicar (`publicar.py`) y organizar por formato
+>   (`organizar.py`) tus notas en una bóveda.
+> - **Fase 2.6 — Relaciones semánticas:** `relacionar.py` enlaza las notas por
+>   tema, entidad y evento (aunque no compartan las mismas palabras). Ver
+>   **[`docs/RELACIONES.md`](docs/RELACIONES.md)** y el [ROADMAP](ROADMAP.md).
 
 ---
 
