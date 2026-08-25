@@ -126,15 +126,16 @@ S += [Paragraph("PDF, Word y Excel a Markdown",
 S += [Paragraph("Conversor a Markdown estructurado  &nbsp;&middot;&nbsp;  Fase 1 del sistema RAG",
                 ParagraphStyle("cs", fontName="Helvetica", fontSize=14, leading=18,
                                textColor=GREEN, spaceAfter=40))]
-S += [Paragraph(f"Documentaci&oacute;n completa del programa<br/>Versi&oacute;n 0.2<br/>"
+S += [Paragraph(f"Documentaci&oacute;n completa del programa<br/>Versi&oacute;n 0.3<br/>"
                 f"Fecha: {FECHA}<br/>Autor: Giovy Polanco",
                 ParagraphStyle("cm", fontName="Helvetica", fontSize=11, leading=19,
                                textColor=MUTED))]
 S += [Spacer(1, 50)]
 _cov = Paragraph("Convierte documentos (PDF digitales o escaneados, Word y Excel) a "
-                 "Markdown estructurado y con metadatos, y los publica en una b&oacute;veda de "
-                 "Obsidian. Es la base de un sistema RAG por etapas: la calidad de esta "
-                 "conversi&oacute;n determina la calidad de todo lo que viene despu&eacute;s.",
+                 "Markdown estructurado y con metadatos, los publica en una b&oacute;veda de "
+                 "Obsidian, los organiza por formato y los conecta por significado. Es la base "
+                 "de un sistema RAG por etapas: la calidad de esta conversi&oacute;n determina la "
+                 "calidad de todo lo que viene despu&eacute;s.",
                  ParagraphStyle("cn", parent=body, spaceAfter=0))
 _covt = Table([[_cov]], colWidths=[CONTENT_W])
 _covt.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), GREEN_BG),
@@ -147,7 +148,7 @@ S += [_covt, PageBreak()]
 S += H1("Contenido")
 _toc = ["1.  Qu&eacute; es el programa", "2.  Qu&eacute; convierte (PDF, Word, Excel)",
         "3.  Requisitos", "4.  Instalaci&oacute;n", "5.  C&oacute;mo se usa (interfaz, terminal, vigilancia)",
-        "6.  Publicar en Obsidian", "7.  C&oacute;mo se convierte cada formato",
+        "6.  Publicar, organizar y conectar en Obsidian", "7.  C&oacute;mo se convierte cada formato",
         "8.  El Markdown de salida", "9.  Configuraci&oacute;n (config.yaml)",
         "10.  C&oacute;mo funciona por dentro", "11.  Errores y soluci&oacute;n de problemas",
         "12.  Limitaciones conocidas", "13.  Roadmap (pr&oacute;ximas fases)"]
@@ -171,7 +172,10 @@ S += UL(["Convierte <b>PDF</b> digitales y <b>escaneados</b> (con OCR en espa&nt
          "Reconoce t&iacute;tulos, listas, p&aacute;rrafos y tablas.",
          "Escribe metadatos (YAML) y marcas de p&aacute;gina para citar el origen.",
          "Tres formas de uso: interfaz gr&aacute;fica, terminal y modo autom&aacute;tico.",
-         "Publica el resultado en Obsidian con un &iacute;ndice navegable."])
+         "Publica el resultado en Obsidian con un &iacute;ndice navegable.",
+         "<b>Organiza</b> la b&oacute;veda por formato y <b>conecta las notas por significado</b> "
+         "(tema, entidad, evento), aunque no usen las mismas palabras.",
+         "Puede hacer <b>todo el ciclo autom&aacute;ticamente</b> al vigilar una carpeta."])
 
 # ---- 2 ----
 S += H1("2. Qu\u00e9 convierte (PDF, Word, Excel)")
@@ -224,7 +228,8 @@ S += P(f"Doble clic en {k('interfaz.bat')} (o {k('python gui.py')}). Tiene dos p
 S += UL(["<b>Convertir archivos:</b> con 'Agregar archivos' eliges PDF, Word o Excel (o una "
          "carpeta), fijas la carpeta de salida y pulsas Convertir. Ves el progreso y puedes cancelar.",
          "<b>Vigilar carpeta:</b> eliges una carpeta de ENTRADA y otra de SALIDA; cada archivo "
-         "que llegue se convierte solo."])
+         "que llegue se convierte solo. Si indicas tu b&oacute;veda y marcas 'enviar a Obsidian y "
+         "organizar', adem&aacute;s se publica, organiza y (si est&aacute; activo) relaciona autom&aacute;ticamente."])
 S += H2("B. Terminal (l\u00ednea de comandos)")
 S += CODE('python main.py                         # convierte documentos/originales/\n'
           'python main.py -i "C:\\ruta\\a\\mi.docx"  # un archivo concreto\n'
@@ -236,13 +241,21 @@ S += P(f"Doble clic en {k('vigilar.bat')} (o {k('python watch.py')}). Deja la ve
        "aparece en la salida y el original pasa a 'procesados' (si algo falla, va a 'errores'). "
        "Detecta cu&aacute;ndo el archivo termin&oacute; de copiarse, as&iacute; que nunca convierte uno a medias.")
 S += CODE("python watch.py -w documentos/entrada -o documentos/markdown --interval 5")
+S += P(f"Si hay una b&oacute;veda configurada ({k('vault_dir')}), la vigilancia adem&aacute;s <b>publica, "
+       f"organiza y conecta</b> cada archivo en Obsidian &mdash; el ciclo completo, sin tocar nada "
+       f"(la parte de conectar requiere {k('auto_relate: true')}). Si Obsidian fallara, la "
+       f"conversi&oacute;n no se pierde: el .md queda en la carpeta de salida.")
 
 # ---- 6 ----
-S += H1("6. Publicar en Obsidian")
-S += P("Una b&oacute;veda de Obsidian es, simplemente, una <b>carpeta con archivos .md</b>. El "
-       f"script {k('publicar.py')} (o {k('publicar.bat')}) toma los .md convertidos y los copia "
-       "a tu b&oacute;veda, bien organizados.")
-S += H2("Qu\u00e9 hace al publicar")
+S += H1("6. Publicar, organizar y conectar en Obsidian")
+S += P("Una b&oacute;veda de Obsidian es, simplemente, una <b>carpeta con archivos .md</b>. Tres "
+       "pasos la convierten en una base de conocimiento navegable: <b>publicar</b> los .md, "
+       "<b>organizarlos</b> por formato y <b>conectarlos</b> por significado. Puedes lanzarlos a "
+       "mano o dejar que el modo autom&aacute;tico (secci&oacute;n 5C) los haga por ti.")
+
+S += H2("Publicar  (publicar.py)")
+S += P(f"El script {k('publicar.py')} (o {k('publicar.bat')}) toma los .md convertidos y los copia "
+       "a tu b&oacute;veda:")
 S += UL([f"Copia cada .md con un nombre seguro para Obsidian.",
          f"Enriquece el encabezado: a&ntilde;ade un {k('alias')} (el t&iacute;tulo) y la etiqueta "
          f"{k('pdf-importado')}, <b>sin borrar</b> las etiquetas que ya tuviera.",
@@ -253,6 +266,30 @@ S += P(f"Por defecto <b>no</b> pisa notas ya publicadas (para no perder lo que e
        f"{k('vault_dir')} en {k('config.yaml')}.")
 S += CODE('python publicar.py                       # usa las rutas de config.yaml\n'
           'python publicar.py -d "C:\\ruta\\a\\tu\\Boveda"')
+
+S += H2("Organizar por formato  (organizar.py)")
+S += P(f"{k('organizar.py')} agrupa cada nota seg&uacute;n de d&oacute;nde vino &mdash; <b>PDF, Word o "
+       "Excel</b> &mdash;, le pone el tag correspondiente (" + k("origen/pdf") + ", "
+       + k("origen/word") + "...), crea un <b>mapa por formato</b> ("
+       + k("Mapa - PDF") + " / " + k("Word") + " / " + k("Excel") + ") que enlaza sus notas y "
+       "regenera el &iacute;ndice. As&iacute;, en el grafo de Obsidian las notas dejan de estar sueltas y "
+       "forman un racimo por formato. Es idempotente: al a&ntilde;adir notas, vuelve a ejecutarlo.")
+
+S += H2("Conectar por significado  (relacionar.py — Fase 2.6)")
+S += P(f"{k('relacionar.py')} (o {k('relacionar.bat')}) lee el contenido de cada nota y la enlaza "
+       "con las que tratan del <b>mismo tema, proyecto, entidad o evento</b>, aunque no usen las "
+       "mismas palabras (las conecta por una <b>jerarqu&iacute;a de conceptos</b>). Escribe tags "
+       "(" + k("tema/...") + ", " + k("entidad/...") + ", " + k("evento/...") + "), "
+       "palabras clave, la propiedad " + k("related") + " y una secci&oacute;n <b>'Notas "
+       "relacionadas'</b> con su nivel de confianza; y crea mapas por tema. Prioriza la "
+       "<b>precisi&oacute;n</b>: pocas relaciones, pero buenas. <b>No es destructivo</b>: s&oacute;lo "
+       "reescribe el encabezado y esa secci&oacute;n marcada.")
+S += CODE('python relacionar.py                     # usa las rutas de config.yaml\n'
+          'python relacionar.py --threshold 0.25 --top-k 5')
+S += CALLOUT("El conocimiento del dominio vive en "
+             + k("src/pdf2md/semantics/data/conceptos.yaml") + " (datos, no c&oacute;digo): a&ntilde;ade "
+             "ah&iacute; tus conceptos y sin&oacute;nimos para mejorar las relaciones. La gu&iacute;a completa "
+             "est&aacute; en <b>docs/RELACIONES.md</b>.")
 
 # ---- 7 ----
 S += H1("7. C\u00f3mo se convierte cada formato")
@@ -305,7 +342,10 @@ S += TABLE([["Opci&oacute;n", "Para qu&eacute; sirve"],
             [k("include_page_markers"), "Insertar las marcas de p&aacute;gina"],
             [k("watch_dir"), "Carpeta de ENTRADA del modo autom&aacute;tico"],
             [k("vault_dir"), "Carpeta de tu b&oacute;veda de Obsidian (null = desactivado)"],
-            [k("vault_subdir"), "Subcarpeta dentro de la b&oacute;veda ('PDF importados')"]],
+            [k("vault_subdir"), "Subcarpeta dentro de la b&oacute;veda ('PDF importados')"],
+            [k("auto_relate"), "En la vigilancia, conectar las notas autom&aacute;ticamente tras organizar"],
+            [k("relate_threshold"), "Confianza m&iacute;nima para crear un enlace (0-1; m&aacute;s alto = menos enlaces)"],
+            [k("relate_top_k"), "M&aacute;ximo de enlaces por nota (evita saturar el grafo)"]],
            [150, CONTENT_W - 150])
 
 # ---- 10 ----
@@ -340,7 +380,8 @@ S += TABLE([["Archivo", "Responsabilidad"],
             [k("text_extractor.py") + " / " + k("ocr.py"), "Leen PDF digital / escaneado"],
             [k("cleaning.py"), "Limpia y normaliza (sin inventar)"],
             [k("markdown_writer.py"), "Bloques a Markdown + metadatos"],
-            [k("vault.py"), "Publica en la b&oacute;veda de Obsidian"],
+            [k("vault.py"), "Publica y organiza la b&oacute;veda de Obsidian"],
+            [k("semantics/"), "Conecta las notas por significado (Fase 2.6)"],
             [k("config.py") + " / " + k("errors.py"), "Configuraci&oacute;n / errores y registro"]],
            [175, CONTENT_W - 175])
 
@@ -380,9 +421,9 @@ S += UL(["La detecci&oacute;n de t&iacute;tulos es heur&iacute;stica: muy buena 
 # ---- 13 ----
 S += H1("13. Roadmap (pr\u00f3ximas fases)")
 S += UL(["<b><font color='#0f6e56'>Hecho &mdash; Fase 1:</font></b> conversi&oacute;n de PDF, Word y Excel a Markdown.",
-         "<b><font color='#0f6e56'>Hecho &mdash; Fase 2:</font></b> publicaci&oacute;n en Obsidian con &iacute;ndice.",
+         "<b><font color='#0f6e56'>Hecho &mdash; Fase 2:</font></b> publicaci&oacute;n en Obsidian, con &iacute;ndice y organizaci&oacute;n por formato.",
+         "<b><font color='#0f6e56'>Hecho &mdash; Fase 2.6:</font></b> relaciones sem&aacute;nticas: mapas por tema; las notas se conectan por significado.",
          "<b>Fase 2.5:</b> exportar de vuelta a PDF (de la b&oacute;veda a un PDF limpio).",
-         "<b>Mejora del grafo:</b> mapas por tema para que las notas se conecten en Obsidian.",
          "<b>Fase 3 (RAG):</b> trocear el texto, generar 'embeddings' y una base vectorial.",
          "<b>Fase 4 (RAG):</b> el chatbot que responde citando la p&aacute;gina de origen."])
 

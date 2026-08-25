@@ -55,7 +55,7 @@ vault_tag: "pdf-importado"             # tag que se añade a cada nota publicada
 #  mapas por tema (Tema - X). NO es destructivo: sólo reescribe el front matter
 #  y esa sección marcada.
 # ==========================================================================
-auto_relate: false           # true = en modo vigilancia, relacionar tras cada archivo nuevo
+auto_relate: true            # true = en modo vigilancia, relacionar tras cada archivo nuevo
 relate_threshold: 0.22       # confianza mínima (0-1). Súbelo para MENOS enlaces pero más seguros
 relate_top_k: 6              # máximo de enlaces por nota (evita saturar el grafo)
 relate_keywords: 8           # nº de palabras clave por nota

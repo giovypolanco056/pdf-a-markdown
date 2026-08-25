@@ -75,8 +75,9 @@ conversión, porque de ella depende todo el RAG posterior.*
 |---|---|---|---|
 | ✅ **Índice global** | Alto | Bajo | Hecho: `Índice.md` (navegable) + `_indice.jsonl` (para el retriever). |
 | ✅ **Nombres normalizados (slug)** | Medio | Bajo | Hecho: `slugify_filename` (seguro para Obsidian, mantiene acentos). |
-| **Publicación automática** | Medio | Bajo | Integrar la publicación en el modo vigilancia (`watch.py`) y en la GUI (pestaña "Publicar en Obsidian"). |
-| **Metadatos más ricos** | Medio | Medio | Hash del documento (id estable), nº de palabras, fecha detectada en el texto, tipo (factura/carta/legal). |
+| ✅ **Organización por formato** | Medio | Bajo | Hecho: `organizar.py` agrupa la bóveda en `Mapa - PDF/Word/Excel` (tag `origen/…`). |
+| ✅ **Publicación automática** | Medio | Bajo | **Hecho:** el modo vigilancia (`watch.py`) publica, organiza y —con `auto_relate`— relaciona cada archivo nuevo; la GUI lo activa desde la pestaña "Vigilar carpeta" (campo bóveda + casilla "enviar a Obsidian y organizar"). |
+| **Metadatos más ricos** | Medio | Medio | Word ya aporta `words`. Pendiente: hash del documento (id estable), fecha detectada en el texto, tipo (factura/carta/legal). |
 | ✅ **Tags y wikilinks automáticos** | Medio | Medio | **Hecho (Fase 2.6):** relaciones semánticas por tema/entidad/evento. Ver abajo. |
 
 ### ✅ Fase 2.6 — Relaciones semánticas (hecho)

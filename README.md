@@ -1,15 +1,21 @@
-# PDF → Markdown (Fase 1 del sistema RAG)
+# Documentos (PDF · Word · Excel) → Markdown
 
-Conversor de documentos **PDF (digitales o escaneados) → Markdown estructurado y con metadatos**.
-Es la **Fase 1** de un sistema RAG mayor. El objetivo aquí es **una sola cosa, bien hecha**:
-extraer el contenido con la máxima fidelidad y estructura posibles, porque *si la extracción
-inicial es mala, el RAG posterior también lo será*.
+Conversor de documentos **PDF (digitales o escaneados), Word (`.docx`) y Excel (`.xlsx`)
+→ Markdown estructurado y con metadatos**. Es la **Fase 1** de un sistema RAG mayor.
+El objetivo aquí es **una sola cosa, bien hecha**: extraer el contenido con la máxima
+fidelidad y estructura posibles, porque *si la extracción inicial es mala, el RAG
+posterior también lo será*.
+
+> El PDF —sobre todo el escaneado— es el caso más difícil, así que este README lo usa
+> como hilo conductor. **Word y Excel recorren el mismo pipeline** y se documentan en
+> [§6](#6-preservación-de-la-estructura). Los tres formatos comparten salida, metadatos
+> y publicación a Obsidian.
 
 > Esta versión **NO** incluye embeddings, bases de datos vectoriales ni chatbot.
 > La arquitectura ya está preparada para añadirlos (ver [§15](#15-arquitectura-preparada-para-rag)).
 
-> **Fases posteriores ya construidas** (fuera del alcance de este README, con su
-> propia documentación):
+> **Fases posteriores ya construidas** (cómo lanzarlas: [§13, opción D](#13-cómo-ejecutar);
+> documentación detallada aparte):
 > - **Fase 2 — Obsidian:** publicar (`publicar.py`) y organizar por formato
 >   (`organizar.py`) tus notas en una bóveda.
 > - **Fase 2.6 — Relaciones semánticas:** `relacionar.py` enlaza las notas por
@@ -72,22 +78,27 @@ Pipeline modular; cada paso es una pieza reemplazable:
               documentos/markdown/*.md
 ```
 
-**Modelo de datos común** (`models.py`): cada PDF se convierte en un
-`DocumentResult` → lista de `Page` → lista de `Block` (`HEADING`, `PARAGRAPH`,
-`LIST`, `TABLE`). Todo lo demás (OCR, texto digital, limpieza, Markdown, chunking
-para RAG) opera sobre esa misma estructura. Esto es lo que hace el sistema
-extensible sin reescribirlo.
+**Modelo de datos común** (`models.py`): cada documento —sea PDF, Word o Excel— se
+convierte en un `DocumentResult` → lista de `Page` → lista de `Block` (`HEADING`,
+`PARAGRAPH`, `LIST`, `TABLE`). Un **despachador** (`pipeline.convert_file`) elige el
+lector según la extensión, pero todos entregan la **misma** estructura; por eso todo
+lo demás (limpieza, Markdown, publicación a Obsidian, chunking para RAG) opera igual
+sobre los tres formatos, sin reescribir nada.
 
 | Archivo | Responsabilidad |
 |---|---|
 | `main.py` | CLI: argumentos y arranque |
 | `src/pdf2md/config.py` | Configuración (config.yaml + defaults) |
+| `src/pdf2md/pipeline.py` | Orquestación, lotes y despachador `convert_file` (elige lector por extensión) |
 | `src/pdf2md/detector.py` | Decide por página: digital u OCR |
-| `src/pdf2md/text_extractor.py` | Texto digital → bloques (PyMuPDF) |
-| `src/pdf2md/ocr.py` | Páginas escaneadas → bloques (Tesseract) |
+| `src/pdf2md/text_extractor.py` | PDF digital → bloques (PyMuPDF) |
+| `src/pdf2md/ocr.py` | PDF escaneado → bloques (Tesseract) |
+| `src/pdf2md/docx_extractor.py` | Word (`.docx`) → bloques (python-docx) |
+| `src/pdf2md/xlsx_extractor.py` | Excel (`.xlsx`) → bloques (openpyxl) |
 | `src/pdf2md/cleaning.py` | Limpieza y normalización |
 | `src/pdf2md/markdown_writer.py` | Bloques → Markdown + metadatos |
-| `src/pdf2md/pipeline.py` | Orquestación y lotes |
+| `src/pdf2md/vault.py` | Publicar y organizar en Obsidian (Fase 2) |
+| `src/pdf2md/semantics/` | Relaciones semánticas entre notas (Fase 2.6) |
 | `src/pdf2md/errors.py` | Errores y logging |
 | `src/pdf2md/rag/` | Interfaces preparadas para las Fases 3-4 |
 
@@ -103,8 +114,11 @@ OCR y, más adelante, RAG (LangChain, sentence-transformers, FAISS/Chroma…).
 | Extracción de PDF | **PyMuPDF** | Rápida, da tamaños de fuente, posiciones y detecta tablas |
 | Render para OCR | **PyMuPDF + Pillow** | Convierte cada página a imagen a DPI configurable |
 | OCR | **Tesseract** (vía **pytesseract**) | Libre, local, excelente soporte de español |
+| Lectura de Word | **python-docx** | Recorre párrafos y tablas en orden, con estilos |
+| Lectura de Excel | **openpyxl** | Lee hojas y celdas (modo `read_only`, `data_only`) |
 | Config / CLI | **PyYAML + argparse** | Estándar y sin fricción |
 | Progreso | **tqdm** | Barra de progreso en lotes |
+| Interfaz gráfica | **Tkinter** | Incluido con Python, sin dependencias extra |
 
 ---
 
@@ -160,6 +174,21 @@ El umbral es configurable en `config.yaml`.
 El **modelo de tamaños de fuente se calcula para todo el documento**, de modo
 que los niveles de título salen consistentes en todo el `.md`.
 
+### Word y Excel
+
+Además de PDF, el conversor lee **Word (`.docx`)** y **Excel (`.xlsx`)** con el mismo
+resultado (`DocumentResult` → Markdown). El despachador `convert_file` importa el
+lector correcto sólo cuando hace falta:
+
+| Formato | Lector | Cómo se preserva la estructura |
+|---|---|---|
+| **Word** (`.docx`) | `python-docx` | Recorre el cuerpo del documento **en su orden real** (párrafos y tablas intercalados); mapea los estilos *Título/Heading* a `#…`, los de lista a listas y las tablas a Markdown. Añade el metadato `words` (nº de palabras). |
+| **Excel** (`.xlsx`) | `openpyxl` (`read_only`, `data_only`) | Cada hoja → un encabezado `##` + una tabla Markdown; recorta filas/columnas vacías, con un tope de seguridad de **5000 filas por hoja**. |
+
+> Los formatos antiguos **`.doc` y `.xls`** **no** están soportados: ábrelos en Office
+> y guárdalos como `.docx`/`.xlsx` (el programa avisa con un mensaje claro). Los
+> temporales `~$…` de Office se ignoran en los lotes.
+
 ---
 
 ## 7. Limpieza y corrección del OCR
@@ -183,28 +212,36 @@ que los niveles de título salen consistentes en todo el `.md`.
 
 ```text
 PDF a MD/
-├── gui.py                  # interfaz gráfica (Tkinter)
-├── interfaz.bat            # lanzador (doble clic) de la interfaz
-├── watch.py                # modo automático (vigila una carpeta)
-├── vigilar.bat             # lanzador (doble clic) del modo automático
 ├── main.py                 # punto de entrada (CLI)
-├── config.yaml             # configuración
+├── gui.py                  # interfaz gráfica (Tkinter)   ·  interfaz.bat  (lanzador)
+├── watch.py                # modo automático (vigila una carpeta)  ·  vigilar.bat
+├── publicar.py             # Fase 2: publicar los .md en una bóveda de Obsidian  ·  publicar.bat
+├── organizar.py            # Fase 2: agrupar la bóveda por formato (PDF/Word/Excel)
+├── relacionar.py           # Fase 2.6: relaciones semánticas entre notas  ·  relacionar.bat
+├── config.yaml             # configuración (conversión + Obsidian + relaciones)
 ├── requirements.txt
-├── README.md
+├── README.md   ROADMAP.md   docs/RELACIONES.md
+├── generar_doc.py          # genera Documentacion.pdf (manual completo)
 ├── tessdata/               # idiomas de Tesseract (spa.traineddata)
 ├── documentos/
-│   ├── originales/         # ← PDF para el modo CLI/interfaz
-│   ├── entrada/            # ← PDF nuevos para el modo automático
+│   ├── originales/         # ← documentos (PDF/Word/Excel) para el modo CLI/interfaz
+│   ├── entrada/            # ← documentos nuevos para el modo automático
 │   ├── markdown/           # → salida .md
-│   ├── procesados/         # → PDF ya convertidos (modo automático)
+│   ├── procesados/         # → originales ya convertidos (modo automático)
 │   └── errores/            # → logs de fallos y avisos
 ├── src/pdf2md/             # el paquete
-│   ├── detector.py  text_extractor.py  ocr.py
+│   ├── detector.py  text_extractor.py  ocr.py        # PDF (digital / escaneado)
+│   ├── docx_extractor.py  xlsx_extractor.py          # Word / Excel
 │   ├── cleaning.py  markdown_writer.py  pipeline.py
 │   ├── models.py  config.py  errors.py  textutils.py
+│   ├── vault.py            # publicar/organizar en Obsidian (Fases 2)
+│   ├── semantics/          # relaciones semánticas (Fase 2.6); data/conceptos.yaml
 │   └── rag/                # interfaces para las Fases 3-4 (no implementadas)
-└── tests/test_smoke.py
+└── tests/                  # test_smoke.py  ·  test_semantics.py
 ```
+
+> La **bóveda de Obsidian** vive fuera del proyecto (`vault_dir` en `config.yaml`); es
+> una carpeta cualquiera de archivos `.md`. Ver [§13, opción D](#13-cómo-ejecutar).
 
 ---
 
@@ -241,27 +278,35 @@ Texto del documento…
 Los comentarios `<!-- página N -->` son invisibles al leer el Markdown pero
 permiten al futuro RAG **citar la página de origen** de cada respuesta.
 
+El campo `file_type` refleja el origen (`pdf`, `docx` o `xlsx`). Los metadatos de OCR
+(`ocr`, `ocr_pages`, `ocr_confidence`) sólo aparecen cuando hubo páginas escaneadas;
+Word añade `words` (nº de palabras). Al **publicar en Obsidian** (Fase 2) el front
+matter se enriquece con `aliases`, tags y —si activas la Fase 2.6— `keywords`,
+`related` y una sección *🔗 Notas relacionadas* (ver [`docs/RELACIONES.md`](docs/RELACIONES.md)).
+
 ---
 
 ## 10. Manejo de errores
 
-- Cada PDF se procesa de forma **aislada**: si uno falla, el lote continúa.
+- Cada documento se procesa de forma **aislada**: si uno falla, el lote continúa.
 - Los fallos se guardan en `documentos/errores/`:
   - `documentos_con_problemas.txt` — índice (fecha · archivo · error).
   - `<archivo>_<fecha>.log` — traza completa.
   - `<archivo>_avisos.txt` — avisos no fatales (p. ej., baja confianza OCR).
 - Casos contemplados: PDF corrupto/ilegible, **PDF cifrado**, OCR no disponible,
-  páginas escaneadas sin texto reconocible.
+  páginas escaneadas sin texto reconocible, y formatos antiguos `.doc`/`.xls`
+  (con un mensaje que pide guardarlos como `.docx`/`.xlsx`).
 
 ---
 
 ## 11. Procesamiento de múltiples documentos
 
-- `python main.py` convierte **todos** los PDF de `documentos/originales/`.
+- `python main.py` convierte **todos** los documentos (PDF, Word y Excel) de
+  `documentos/originales/`.
 - `--recursive` incluye subcarpetas.
 - Por defecto **no** re-procesa un `.md` que ya existe (usa `--overwrite` para forzar).
 - Barra de progreso con `tqdm` y resumen final (OK / omitidos / con error).
-- Se mantiene la **relación 1:1** `documento.pdf` → `documento.md`.
+- Se mantiene la **relación 1:1** `documento.pdf|docx|xlsx` → `documento.md`.
 
 ---
 
@@ -318,12 +363,17 @@ python gui.py
 
 La ventana tiene **dos pestañas**:
 
-- **Convertir archivos:** agrega PDFs o una carpeta, elige la carpeta de salida,
-  pulsa **Convertir** y ve el progreso y el resultado por archivo. Se puede
-  **cancelar** y hay botones para abrir la carpeta de salida y la de errores.
+- **Convertir archivos:** agrega documentos (PDF · Word · Excel) o una carpeta,
+  elige la carpeta de salida, pulsa **Convertir** y ve el progreso y el resultado
+  por archivo. Se puede **cancelar** y hay botones para abrir la carpeta de salida
+  y la de errores.
 - **Vigilar carpeta:** elige con botones la carpeta de **ENTRADA** y la de
-  **SALIDA** (y la de procesados), pulsa **Iniciar vigilancia** y cada PDF que
-  llegue a la entrada se convierte solo. **Detener** cuando quieras.
+  **SALIDA** (y la de procesados), pulsa **Iniciar vigilancia** y cada documento que
+  llegue a la entrada se convierte solo. **Detener** cuando quieras. Aquí también
+  puedes indicar tu **bóveda de Obsidian** y marcar *«enviar a Obsidian y organizar
+  por formato»*: entonces cada archivo, al convertirse, se **publica, organiza y
+  —si `auto_relate` está activo— relaciona** en la bóveda, sin tocar nada
+  (ciclo completo; ver opción D).
 
 Debajo hay opciones comunes (tablas, cabeceras/pies, idioma OCR, DPI…). Todo el
 trabajo corre en segundo plano (la ventana no se congela) y no necesita
@@ -332,11 +382,11 @@ dependencias extra (Tkinter viene con Python).
 ### Opción B — Línea de comandos
 
 ```bash
-# 1) Coloca tus PDF en  documentos/originales/  y luego:
+# 1) Coloca tus documentos (PDF/Word/Excel) en  documentos/originales/  y luego:
 python main.py
 
 # Un archivo o carpeta concretos:
-python main.py -i "C:\\ruta\\a\\mi.pdf"
+python main.py -i "C:\\ruta\\a\\mi.pdf"      # o mi.docx / mi.xlsx
 python main.py -i entrada -o salida --recursive --overwrite
 
 # Ajustes de OCR:
@@ -351,25 +401,48 @@ Doble clic en **`vigilar.bat`**, o bien:
 python watch.py
 ```
 
-Deja la ventana abierta: cada PDF que copies o guardes en **`documentos/entrada/`**
-se convierte solo, el `.md` aparece en **`documentos/markdown/`** y el PDF original
-se mueve a **`documentos/procesados/`** (si algo falla, va a `documentos/errores/`).
-Detecta cuándo el archivo terminó de copiarse (comprueba que su tamaño se estabiliza),
-así que nunca convierte un PDF a medio copiar. Pulsa **Ctrl+C** o cierra la ventana
-para detenerlo. Carpetas e intervalo son configurables:
+Deja la ventana abierta: cada documento (PDF, Word o Excel) que copies o guardes en
+**`documentos/entrada/`** se convierte solo, el `.md` aparece en
+**`documentos/markdown/`** y el original se mueve a **`documentos/procesados/`**
+(si algo falla, va a `documentos/errores/`). Detecta cuándo el archivo terminó de
+copiarse (comprueba que su tamaño se estabiliza), así que nunca convierte uno a medio
+copiar. Pulsa **Ctrl+C** o cierra la ventana para detenerlo. Carpetas e intervalo son
+configurables:
 
 ```bash
 python watch.py -w documentos/entrada -o documentos/markdown --interval 5
 ```
 
+> **Ciclo completo hacia Obsidian.** Si hay una bóveda configurada (`vault_dir` en
+> `config.yaml`, o la salida apunta a ella), la vigilancia además **publica** cada
+> `.md` en la bóveda y la **organiza por formato**; y con `auto_relate: true`, teje
+> también las **relaciones semánticas**. Si Obsidian falla, la conversión no se pierde
+> (el `.md` queda en la salida). Ver **opción D** y [`docs/RELACIONES.md`](docs/RELACIONES.md).
+
 > **Que arranque solo con Windows:** crea una tarea en el *Programador de tareas*
 > (al iniciar sesión → `vigilar.bat`), o coloca un acceso directo a `vigilar.bat`
 > en la carpeta *Inicio* (`Win+R` → `shell:startup`).
 
-Comprobar la lógica sin PDFs ni Tesseract:
+### Opción D — Publicar y conectar en Obsidian (Fases 2 y 2.6)
+
+Estos pasos toman los `.md` ya convertidos y construyen una base de conocimiento
+navegable. Puedes lanzarlos a mano (o dejar que la vigilancia los haga por ti, arriba):
 
 ```bash
-python tests/test_smoke.py
+python publicar.py     # copia los .md a la bóveda (vault_dir) + Índice + front matter
+python organizar.py    # agrupa la bóveda por formato: Mapa - PDF/Word/Excel
+python relacionar.py   # enlaza las notas por tema/entidad/evento (🔗 Notas relacionadas)
+```
+
+También por doble clic: `publicar.bat` y `relacionar.bat`. Detalle completo de las
+relaciones semánticas en **[`docs/RELACIONES.md`](docs/RELACIONES.md)**; el plan de
+fases, en **[ROADMAP.md](ROADMAP.md)**.
+
+Comprobar la lógica sin documentos ni Tesseract:
+
+```bash
+python tests/test_smoke.py       # pipeline de conversión
+python tests/test_semantics.py   # relaciones semánticas (Fase 2.6)
 ```
 
 ---
